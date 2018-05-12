@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  nzsmartidreader.api:
+    image: ${DOCKER_REGISTRY}nzsmartidreaderapi
+    build:
+      context: .
+      dockerfile: NZSmartIDReader.Api\Dockerfile
