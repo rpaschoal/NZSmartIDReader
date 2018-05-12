@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Cognitive.CustomVision.Prediction;
 using Microsoft.Cognitive.CustomVision.Training;
 using Microsoft.Cognitive.CustomVision.Training.Models;
+using Microsoft.Rest;
 
 namespace NZSmartIDReader.Core
 {
@@ -15,10 +16,11 @@ namespace NZSmartIDReader.Core
     {
         private Project CustomVisionProject { get; set; }
 
-        public NZDriverLicenceSmartIdReader(string samplesDirectory, double predictionThreshold) : base(samplesDirectory, predictionThreshold) {}
+        public NZDriverLicenceSmartIdReader(string samplesDirectory, double predictionThreshold) : base(samplesDirectory, predictionThreshold) { }
 
         internal override void Train(string samplesDirectory)
         {
+
             TrainingApi trainingApi = new TrainingApi() { ApiKey = AzureCredentials.TrainingKey };
 
             Tag tag;
@@ -51,19 +53,25 @@ namespace NZSmartIDReader.Core
             trainingApi.CreateImagesFromFiles(CustomVisionProject.Id, new ImageFileCreateBatch(sampleImagesNZ.ToList(), new List<Guid>() { tag.Id, tag2.Id }));
             trainingApi.CreateImagesFromFiles(CustomVisionProject.Id, new ImageFileCreateBatch(sampleImagesGlobal.ToList(), new List<Guid>() { tag.Id }));
 
-            var trainingIteration = trainingApi.TrainProject(CustomVisionProject.Id);
-
-            // TODO: Improve this: make the initialization async and add a timeout
-            while (trainingIteration.Status == "Training")
+            try
             {
-                Thread.Sleep(1000);
+                var trainingIteration = trainingApi.TrainProject(CustomVisionProject.Id);
 
-                // Re-query the iteration to get it's updated status
-                trainingIteration = trainingApi.GetIteration(CustomVisionProject.Id, trainingIteration.Id);
+                // TODO: Improve this: make the initialization async and add a timeout
+                while (trainingIteration.Status == "Training")
+                {
+                    Thread.Sleep(1000);
+
+                    // Re-query the iteration to get it's updated status
+                    trainingIteration = trainingApi.GetIteration(CustomVisionProject.Id, trainingIteration.Id);
+                }
+
+                trainingIteration.IsDefault = true;
+                trainingApi.UpdateIteration(CustomVisionProject.Id, trainingIteration.Id, trainingIteration);
             }
-
-            trainingIteration.IsDefault = true;
-            trainingApi.UpdateIteration(CustomVisionProject.Id, trainingIteration.Id, trainingIteration);
+            catch (HttpOperationException e) when (e.Response.Content.Contains("BadRequestTrainingNotNeeded"))
+            {
+            }
 
             IsInitialized = true;
         }
