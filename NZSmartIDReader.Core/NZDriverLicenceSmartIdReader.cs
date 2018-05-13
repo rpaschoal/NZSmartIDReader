@@ -14,6 +14,8 @@ namespace NZSmartIDReader.Core
 {
     public sealed class NZDriverLicenceSmartIdReader : SmartIdReader, ISmartIdReader
     {
+        private readonly Guid GeneralCompactDomainId = new Guid("0732100f-1a38-4e49-a514-c9b44c697ab5");
+
         private Project _customVisionProject;
         private Project CustomVisionProject {
             get
@@ -25,7 +27,7 @@ namespace NZSmartIDReader.Core
 
                     if (existingProject == null)
                     {
-                        _customVisionProject = TrainingApi.CreateProject(nameof(NZDriverLicenceSmartIdReader));
+                        _customVisionProject = TrainingApi.CreateProject(nameof(NZDriverLicenceSmartIdReader), domainId: GeneralCompactDomainId);
                     }
                     else
                     {
